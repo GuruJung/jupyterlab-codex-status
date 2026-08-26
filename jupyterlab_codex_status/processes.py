@@ -15,8 +15,10 @@ def is_codex_process(name: str, executable: str, command: list[str]) -> bool:
         return True
     if not ({"node", "node.exe"} & basenames):
         return False
-    joined = " ".join(command).replace("\\", "/").casefold()
-    return "@openai/codex" in joined or "/codex/bin/codex.js" in joined
+    if len(command) < 2:
+        return False
+    script = command[1].replace("\\", "/").casefold()
+    return script.endswith("/@openai/codex/bin/codex.js")
 
 
 @dataclass(frozen=True)

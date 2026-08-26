@@ -133,9 +133,13 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect.poll(currentState).toBe('blocked');
   await expect(page.page.locator('.jp-CodexStatus-icon.jp-CodexStatus-blocked')).toBeVisible();
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'training job' })).toBeVisible();
+  await expect(page.page.locator('.lm-TabBar-tab[data-codex-status="blocked"]'))
+    .toHaveAttribute('aria-label', /Codex blocked/);
 
   await page.page.getByRole('tab', { name: 'Running Terminals and Kernels' }).click();
-  await expect(page.page.locator('.jp-RunningSessions-itemLabel', { hasText: 'training job' })).toBeVisible();
+  const terminalSection = page.page.getByRole('region', { name: 'Terminals Section', exact: true });
+  await expect(terminalSection.locator('.jp-RunningSessions-itemLabel', { hasText: 'training job' }))
+    .toBeVisible();
 
   await page.page.locator('.jp-Terminal').click({ button: 'right' });
   await page.page.getByRole('menuitem', { name: 'Rename Terminal…' }).click();
@@ -144,8 +148,11 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await page.page.locator('.jp-Dialog-button.jp-mod-accept').click();
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'dialog title' })).toBeVisible();
 
-  await page.page.evaluate(async ({ terminalName }) => {
-    await fetch(`/api/terminals/${encodeURIComponent(terminalName)}`, { method: 'DELETE' });
-  }, { terminalName: name });
+  const runningItem = terminalSection.locator('.jp-RunningSessions-item', { hasText: 'dialog title' });
+  await expect(runningItem.locator('.jp-CodexStatus-srOnly')).toContainText('Codex blocked');
+  await runningItem.hover();
+  const shutdownButton = runningItem.locator('.jp-RunningSessions-itemShutdown');
+  await expect(shutdownButton).toBeVisible();
+  await shutdownButton.click();
   await expect.poll(async () => page.page.locator('.jp-Terminal').count()).toBe(0);
 });

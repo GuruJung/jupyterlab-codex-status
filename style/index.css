@@ -7,6 +7,15 @@
 }
 
 .jp-CodexStatus-icon::before { display: inline-block; }
+.jp-CodexStatus-srOnly {
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
 .jp-CodexStatus-idle { color: var(--jp-success-color1); }
 .jp-CodexStatus-icon.jp-CodexStatus-idle::before { content: '●'; }
 .jp-CodexStatus-working { color: var(--jp-warn-color1); }

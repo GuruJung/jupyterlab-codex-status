@@ -46,14 +46,19 @@ class TerminalService:
         self._observers: dict[str, _Observer] = {}
         self._cache: tuple[float, list[dict[str, Any]]] | None = None
         self._inflight: asyncio.Task[list[dict[str, Any]]] | None = None
+        self._generation = 0
+        self._original_start_reading: Any = None
         self.available = self._compatible(manager)
         self.unavailable_reason = ""
         if not self.available:
             self.unavailable_reason = "compatible jupyter_server_terminals manager not found"
             return
-        self._install_observer_hook()
-        for name, pty in list(self.manager.terminals.items()):
-            self._attach(name, pty)
+        try:
+            self._install_observer_hook()
+            for name, pty in list(self.manager.terminals.items()):
+                self._attach(name, pty)
+        except Exception as error:
+            self._degrade(f"incompatible terminal PTY internals: {error}")
 
     @staticmethod
     def _compatible(manager: Any) -> bool:
@@ -66,12 +71,16 @@ class TerminalService:
     def _install_observer_hook(self) -> None:
         service = self
         original = self.manager.start_reading
+        self._original_start_reading = original
 
         def wrapped(manager: Any, pty: Any) -> Any:
             result = original(pty)
             name = getattr(pty, "term_name", None)
-            if name:
-                service._attach(name, pty)
+            if name and service.available:
+                try:
+                    service._attach(name, pty)
+                except Exception as error:
+                    service._degrade(f"incompatible terminal PTY internals: {error}")
             return result
 
         self.manager.start_reading = types.MethodType(wrapped, self.manager)
@@ -79,6 +88,11 @@ class TerminalService:
     def _attach(self, name: str, pty: Any) -> None:
         if name in self._observers:
             return
+        clients = getattr(pty, "clients", None)
+        if clients is None or not callable(getattr(clients, "append", None)):
+            raise AttributeError("PtyWithClients.clients is unavailable")
+        if getattr(pty, "ptyproc", None) is None:
+            raise AttributeError("PtyWithClients.ptyproc is unavailable")
         try:
             rows, columns = pty.ptyproc.getwinsize()
         except (AttributeError, OSError):
@@ -93,9 +107,30 @@ class TerminalService:
         )
         self.observed[name] = observed
         observer = _Observer(self, name)
-        pty.clients.append(observer)
+        clients.append(observer)
         self._observers[name] = observer
         self.invalidate()
+
+    def _degrade(self, reason: str) -> None:
+        if not self.available:
+            return
+        self.available = False
+        self.unavailable_reason = reason
+        if self._original_start_reading is not None:
+            self.manager.start_reading = self._original_start_reading
+        for name, observer in list(self._observers.items()):
+            pty = self.manager.terminals.get(name)
+            clients = getattr(pty, "clients", None)
+            if clients is not None:
+                try:
+                    clients.remove(observer)
+                except (AttributeError, ValueError):
+                    pass
+        self._observers.clear()
+        self.observed.clear()
+        self.titles = TitleStore()
+        self.invalidate()
+        self.log.warning("jupyterlab-codex-status unavailable: %s", reason)
 
     def _osc_title(self, name: str, title: str | None) -> None:
         try:
@@ -148,6 +183,7 @@ class TerminalService:
         self.invalidate()
 
     def invalidate(self) -> None:
+        self._generation += 1
         self._cache = None
 
     async def list_terminals(self) -> list[dict[str, Any]]:
@@ -156,14 +192,22 @@ class TerminalService:
         now = time.monotonic()
         if self._cache is not None and now - self._cache[0] < self.CACHE_TTL_SECONDS:
             return self._cache[1]
-        if self._inflight is not None:
-            return await asyncio.shield(self._inflight)
-        self._inflight = asyncio.create_task(self._calculate())
-        try:
-            result = await asyncio.shield(self._inflight)
+        task = self._inflight
+        if task is None:
+            generation = self._generation
+            task = asyncio.create_task(self._calculate_and_cache(generation))
+            self._inflight = task
+            task.add_done_callback(self._clear_inflight)
+        return await asyncio.shield(task)
+
+    async def _calculate_and_cache(self, generation: int) -> list[dict[str, Any]]:
+        result = await self._calculate()
+        if generation == self._generation:
             self._cache = (time.monotonic(), result)
-            return result
-        finally:
+        return result
+
+    def _clear_inflight(self, task: asyncio.Task[list[dict[str, Any]]]) -> None:
+        if self._inflight is task:
             self._inflight = None
 
     async def _calculate(self) -> list[dict[str, Any]]:
@@ -171,7 +215,11 @@ class TerminalService:
         results: list[dict[str, Any]] = []
         for name, pty in list(self.manager.terminals.items()):
             if name not in self.observed:
-                self._attach(name, pty)
+                try:
+                    self._attach(name, pty)
+                except Exception as error:
+                    self._degrade(f"incompatible terminal PTY internals: {error}")
+                    raise RuntimeError(self.unavailable_reason) from error
             observed = self.observed.get(name)
             agent = snapshot.agent_for_pty(pty)
             state: str | None = None

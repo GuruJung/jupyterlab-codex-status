@@ -16,6 +16,12 @@ def test_native_and_official_node_wrapper_are_detected() -> None:
 def test_shell_and_arbitrary_codex_text_are_not_detected() -> None:
     assert not is_codex_process("bash", "/bin/bash", ["bash", "-c", "echo codex"])
     assert not is_codex_process("node", "/usr/bin/node", ["node", "/tmp/codex-helper.js"])
+    assert not is_codex_process(
+        "node", "/usr/bin/node", ["node", "/tmp/app.js", "@openai/codex"]
+    )
+    assert not is_codex_process(
+        "node", "/usr/bin/node", ["node", "/tmp/codex/bin/codex.js"]
+    )
 
 
 def test_snapshot_ignores_process_races_and_matches_foreground_group(monkeypatch) -> None:

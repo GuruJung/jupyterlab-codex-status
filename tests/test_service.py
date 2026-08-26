@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from types import SimpleNamespace
 
 import pytest
 
@@ -82,6 +83,47 @@ async def test_single_flight_and_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls == 1
     assert await service.list_terminals() == []
     assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_cancelled_waiter_keeps_single_flight_registered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = TerminalService(FakeManager(), logging.getLogger("test"))
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def calculate() -> list[dict[str, object]]:
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return []
+
+    monkeypatch.setattr(service, "_calculate", calculate)
+    first = asyncio.create_task(service.list_terminals())
+    await started.wait()
+    first.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    second = asyncio.create_task(service.list_terminals())
+    await asyncio.sleep(0)
+    assert calls == 1
+    release.set()
+    assert await second == []
+    assert calls == 1
+
+
+def test_incompatible_pty_degrades_without_breaking_start_reading() -> None:
+    manager = FakeManager()
+    manager.terminals = {}
+    service = TerminalService(manager, logging.getLogger("test"))
+    incompatible = SimpleNamespace(term_name="2")
+    manager.start_reading(incompatible)
+    assert not service.available
+    assert "PTY internals" in service.unavailable_reason
+    assert manager.start_reading(incompatible) is None
 
 
 def test_incompatible_manager_degrades() -> None:

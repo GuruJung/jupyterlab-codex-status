@@ -5,68 +5,12 @@ import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITerminalTracker } from '@jupyterlab/terminal';
 
 import { clearTerminalTitle, fetchTerminals, setTerminalTitle } from './api';
-import { ITerminalStatus, PollingModel } from './model';
+import { PollingModel } from './model';
+import { decorateRunningManager, describe, syncTabAriaLabels } from './running';
 import '../style/index.css';
 
 const PLUGIN_ID = 'jupyterlab-codex-status:plugin';
 const RENAME_COMMAND = 'jupyterlab-codex-status:rename-terminal';
-const STATE_ICONS: Record<'idle' | 'working' | 'blocked', string> = {
-  idle: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"%3E%3Ccircle cx="8" cy="8" r="5" fill="%232ca02c"/%3E%3C/svg%3E',
-  working: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"%3E%3Cpath d="M8 2a6 6 0 1 1-5.2 3" fill="none" stroke="%23d99b00" stroke-width="2"/%3E%3Cpath d="M1 2v4h4" fill="none" stroke="%23d99b00" stroke-width="2"/%3E%3C/svg%3E',
-  blocked: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"%3E%3Cpath d="M8 1 15 14H1Z" fill="%23d62728"/%3E%3Cpath d="M8 5v5M8 12v1" stroke="white"/%3E%3C/svg%3E'
-};
-
-function glyph(status: ITerminalStatus): string {
-  if (status.agent !== 'codex') {
-    return '';
-  }
-  return status.state === 'idle' ? '●' : status.state === 'working' ? '◌' : status.state === 'blocked' ? '⚠' : '';
-}
-
-function describe(status: ITerminalStatus, model: PollingModel): string {
-  const state = status.agent === 'codex' ? `Codex ${status.state ?? 'unknown'}` : 'Terminal';
-  const updated = model.lastSuccess ? model.lastSuccess.toLocaleTimeString() : 'not updated yet';
-  const stale = model.stale ? '; connection failed, status may be stale' : '';
-  return `${state}; last updated ${updated}${stale}`;
-}
-
-function decorateRunningManager(manager: IRunningSessions.IManager, model: PollingModel): void {
-  const wrapped = manager as IRunningSessions.IManager & {
-    __codexStatusWrapped?: boolean;
-    __codexStatusHasArgs?: boolean;
-    __codexStatusLastArgs?: unknown;
-  };
-  if (!/terminal/i.test(manager.name) || wrapped.__codexStatusWrapped) {
-    return;
-  }
-  manager.runningChanged.connect((_sender, args) => {
-    wrapped.__codexStatusHasArgs = true;
-    wrapped.__codexStatusLastArgs = args;
-  });
-  const original = manager.running.bind(manager);
-  manager.running = options => {
-    return original(options).map(item => {
-      const originalLabel = item.label;
-      const originalTitle = item.labelTitle;
-      const rendered = originalLabel.call(item);
-      const text = typeof rendered === 'string' ? rendered : '';
-      const name = text.replace(/^Terminal\s+/, '');
-      const status = model.statuses.get(name);
-      if (!status) {
-        return item;
-      }
-      return {
-        ...item,
-        className: `${item.className ?? ''} jp-CodexStatus-${status.state ?? 'unknown'}`.trim(),
-        icon: () => status.state ? STATE_ICONS[status.state] : item.icon.call(item),
-        label: () => `${glyph(status)} ${status.title ?? text}`.trim(),
-        labelTitle: () => `${originalTitle?.call(item) ?? text}; ${describe(status, model)}`
-      };
-    });
-  };
-  wrapped.__codexStatusWrapped = true;
-}
-
 function emitRunningChanged(manager: IRunningSessions.IManager): void {
   const wrapped = manager as IRunningSessions.IManager & {
     __codexStatusHasArgs?: boolean;
@@ -96,6 +40,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
   ): Promise<void> => {
     const model = new PollingModel(fetchTerminals);
     const defaultIconClasses = new WeakMap<object, string>();
+    const terminalManager = app.serviceManager.terminals;
+    const terminalNames = (): string[] => Array.from(terminalManager.running(), item => item.name);
 
     if (settingsRegistry) {
       try {
@@ -134,11 +80,19 @@ const plugin: JupyterFrontEndPlugin<void> = {
             : (defaultIconClasses.get(widget) ?? '');
           const codexStatus = status.state ?? 'none';
           const codexAgent = status.agent ?? 'none';
+          const codexAriaLabel = `${widget.title.label}; ${describe(status, model)}`;
           if (
-            widget.title.dataset.codexStatus !== codexStatus ||
-            widget.title.dataset.codexAgent !== codexAgent
+            widget.title.dataset['codex-status'] !== codexStatus ||
+            widget.title.dataset['codex-agent'] !== codexAgent ||
+            widget.title.dataset['codex-aria-label'] !== codexAriaLabel
           ) {
-            widget.title.dataset = { ...widget.title.dataset, codexStatus, codexAgent };
+            widget.title.dataset = {
+              ...widget.title.dataset,
+              'codex-status': codexStatus,
+              'codex-agent': codexAgent,
+              'codex-aria-label': codexAriaLabel
+            };
+            globalThis.requestAnimationFrame(() => syncTabAriaLabels());
           }
         });
         const nextSignature = JSON.stringify([
@@ -148,7 +102,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         const runningChanged = nextSignature !== runningSignature;
         runningSignature = nextSignature;
         for (const manager of runningManagers.items()) {
-          decorateRunningManager(manager, model);
+          decorateRunningManager(manager, model, terminalManager.runningChanged, terminalNames);
           if (runningChanged) {
             emitRunningChanged(manager);
           }
@@ -163,7 +117,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
       update();
     });
     runningManagers.added.connect((_sender, manager) => {
-      decorateRunningManager(manager, model);
+      decorateRunningManager(manager, model, terminalManager.runningChanged, terminalNames);
     });
 
     app.commands.addCommand(RENAME_COMMAND, {
@@ -201,3 +155,4 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
 export default plugin;
 export { PollingModel } from './model';
+export { decorateRunningManager, syncTabAriaLabels } from './running';
