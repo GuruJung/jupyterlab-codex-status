@@ -1,0 +1,37 @@
+services:
+  unit-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    profiles: ["test"]
+    command: ["bash", "-c", "python -m pytest -q --cov=jupyterlab_codex_status && ruff check jupyterlab_codex_status tests && npm run test:unit && npm run lint"]
+
+  e2e-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    profiles: ["test"]
+    command: ["bash", "scripts/run-e2e.sh"]
+
+  smoke-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: package
+    profiles: ["test"]
+    command: ["bash", "scripts/smoke-package.sh"]
+
+  package:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: package
+    profiles: ["package"]
+    volumes:
+      - artifacts:/artifacts
+
+volumes:
+  artifacts:
+    name: ${ARTIFACTS_VOLUME_NAME:-${COMPOSE_PROJECT_NAME}_artifacts}

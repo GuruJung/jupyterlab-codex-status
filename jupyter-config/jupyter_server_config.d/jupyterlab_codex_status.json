@@ -1,0 +1,8 @@
+{
+  "ServerApp": {
+    "jpserver_extensions": {
+      "jupyterlab_codex_status": true
+    }
+  }
+}
+

@@ -1,0 +1,22 @@
+.jp-CodexStatus-icon {
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.35em;
+  text-align: center;
+  width: 1em;
+}
+
+.jp-CodexStatus-icon::before { display: inline-block; }
+.jp-CodexStatus-idle { color: var(--jp-success-color1); }
+.jp-CodexStatus-icon.jp-CodexStatus-idle::before { content: '●'; }
+.jp-CodexStatus-working { color: var(--jp-warn-color1); }
+.jp-CodexStatus-icon.jp-CodexStatus-working::before { content: '◌'; animation: jp-CodexStatus-spin 1s linear infinite; }
+.jp-CodexStatus-blocked { color: var(--jp-error-color1); }
+.jp-CodexStatus-icon.jp-CodexStatus-blocked::before { content: '⚠'; }
+
+@keyframes jp-CodexStatus-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .jp-CodexStatus-working,
+  .jp-CodexStatus-icon.jp-CodexStatus-working::before { animation: none; }
+}

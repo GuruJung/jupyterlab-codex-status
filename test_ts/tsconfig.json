@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "module": "CommonJS",
+    "noUnusedLocals": false,
+    "rootDir": ".."
+  },
+  "include": ["../src/**/*.ts", "./**/*.ts"]
+}
+

@@ -1,0 +1,98 @@
+[build-system]
+requires = [
+  "hatchling>=1.26",
+  "hatch-nodejs-version>=0.3.2",
+  "hatch-jupyter-builder>=0.9.1",
+  "jupyterlab==4.4.0",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "jupyterlab-codex-status"
+description = "Show Codex CLI state and persistent in-memory terminal titles in JupyterLab."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "jupyterlab-codex-status contributors" }]
+keywords = ["JupyterLab", "Codex", "terminal"]
+classifiers = [
+  "Framework :: Jupyter",
+  "Framework :: Jupyter :: JupyterLab :: 4",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dynamic = ["version"]
+dependencies = [
+  "jupyterlab>=4.4,<5",
+  "jupyter-server>=2.0,<3",
+  "jupyter-server-terminals>=0.5,<0.6",
+  "psutil>=5.9",
+  "pyte>=0.8.2",
+  "terminado>=0.18,<0.19",
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.scripts]
+jltitle = "jupyterlab_codex_status.cli:main"
+
+[tool.hatch.version]
+source = "nodejs"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/jupyterlab_codex_status",
+  "/jupyter-config",
+  "/src",
+  "/style",
+  "/package.json",
+  "/package-lock.json",
+  "/tsconfig.json",
+  "/LICENSE",
+  "/NOTICE",
+  "/README.md",
+  "/README_ko.md",
+]
+artifacts = ["jupyterlab_codex_status/labextension"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["jupyterlab_codex_status"]
+artifacts = ["jupyterlab_codex_status/labextension"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"jupyterlab_codex_status/labextension" = "share/jupyter/labextensions/jupyterlab-codex-status"
+"jupyter-config" = "etc/jupyter"
+"LICENSE" = "share/licenses/jupyterlab-codex-status/LICENSE"
+"NOTICE" = "share/licenses/jupyterlab-codex-status/NOTICE"
+"README.md" = "share/doc/jupyterlab-codex-status/README.md"
+"README_ko.md" = "share/doc/jupyterlab-codex-status/README_ko.md"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder>=0.9.1"]
+build-function = "hatch_jupyter_builder.npm_builder"
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+npm = ["npm"]
+build_cmd = "build:prod"
+source_dir = "."
+build_dir = "jupyterlab_codex_status/labextension"
+
+[tool.hatch.build.hooks.jupyter-builder.editable-build-kwargs]
+npm = ["npm"]
+build_cmd = "build"
+source_dir = "."
+build_dir = "jupyterlab_codex_status/labextension"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
