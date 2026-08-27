@@ -5,7 +5,7 @@ set -euo pipefail
 # so the server observes a real foreground process whose basename is `codex`.
 sleep 1
 jltitle "fixture title"
-sleep 1
+IFS= read -r _
 printf '\033]2;Codex ⠋ \007'
 IFS= read -r _
 printf '\033]2;Action Required\007'

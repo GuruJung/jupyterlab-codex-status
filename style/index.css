@@ -18,7 +18,8 @@
   transform-origin: center;
 }
 .jp-CodexStatus-working .jp-RunningSessions-icon { animation: jp-CodexStatus-spin 1s linear infinite; }
-.jp-CodexStatus-blocked { color: var(--jp-info-color1); }
+.jp-CodexStatus-blocked { color: var(--jp-error-color1); }
+.jp-CodexStatus-icon.jp-CodexStatus-blocked { color: var(--jp-info-color1); }
 
 @keyframes jp-CodexStatus-spin { to { transform: rotate(360deg); } }
 

@@ -183,6 +183,16 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
     expect(geometry.centerDeltaY).toBeLessThanOrEqual(1);
   };
 
+  await expect.poll(currentState).toBe('idle');
+  const idleTabIcon = page.page.locator(
+    '.lm-DockPanel-tabBar .jp-CodexStatus-icon.jp-CodexStatus-idle > svg'
+  );
+  await expect(idleTabIcon).toBeVisible();
+  expectAligned(await tabIconGeometry('idle'));
+  await page.page.locator('.jp-Terminal').click();
+  await page.page.keyboard.type('continue-to-working');
+  await page.page.keyboard.press('Enter');
+
   await expect.poll(currentState).toBe('working');
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'training job' })).toBeVisible();
   const workingTabIcon = page.page.locator(
@@ -190,6 +200,14 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   );
   await expect(workingTabIcon).toBeVisible();
   expectAligned(await tabIconGeometry('working'));
+  await expect.poll(async () => workingTabIcon.evaluate(element =>
+    getComputedStyle(element).animationName
+  )).toBe('jp-CodexStatus-spin');
+  await page.page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect.poll(async () => workingTabIcon.evaluate(element =>
+    getComputedStyle(element).animationName
+  )).toBe('none');
+  await page.page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect.poll(async () => workingTabIcon.evaluate(element =>
     getComputedStyle(element).animationName
   )).toBe('jp-CodexStatus-spin');
