@@ -2,7 +2,11 @@ import { IRunningSessions } from '@jupyterlab/running';
 import React from 'react';
 
 import { PollingModel } from '../src/model';
-import { decorateRunningManager, syncTabAriaLabels } from '../src/running';
+import {
+  decorateRunningManager,
+  emitRunningChanged,
+  syncTabAriaLabels
+} from '../src/running';
 
 describe('PollingModel', () => {
   beforeEach(() => {
@@ -69,7 +73,7 @@ describe('Running terminal decoration', () => {
     }
 
     const item = new RunningTerminal();
-    const terminalSignal = { connect: jest.fn() };
+    const terminalSignal = { emit: jest.fn() };
     const manager = {
       name: 'Terminais',
       runningChanged: terminalSignal,
@@ -96,7 +100,8 @@ describe('Running terminal decoration', () => {
     expect(children[0]).toBe('◌ training job');
     const hidden = children[1] as React.ReactElement;
     expect(hidden.props.className).toBe('jp-CodexStatus-srOnly');
-    expect(hidden.props.children).toContain('Codex working');
+    expect(Array.isArray(hidden.props.children)).toBe(true);
+    expect(hidden.props.children[0]).toContain('Codex working');
   });
 
   it('ignores managers that do not expose the terminal service signal', () => {
@@ -110,6 +115,14 @@ describe('Running terminal decoration', () => {
     const model = new PollingModel(async () => ({ terminals: [] }));
     decorateRunningManager(manager, model, { connect: jest.fn() }, () => []);
     expect(manager.running).toBe(original);
+  });
+
+  it('emits current models for entries that predate plugin activation', () => {
+    const signal = { emit: jest.fn() };
+    const manager = { runningChanged: signal } as unknown as IRunningSessions.IManager;
+    const models = [{ name: 'existing' }];
+    emitRunningChanged(manager, models);
+    expect(signal.emit).toHaveBeenCalledWith(models);
   });
 });
 

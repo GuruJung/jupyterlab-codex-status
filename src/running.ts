@@ -40,16 +40,10 @@ export function decorateRunningManager(
 ): void {
   const wrapped = manager as IRunningSessions.IManager & {
     __codexStatusWrapped?: boolean;
-    __codexStatusHasArgs?: boolean;
-    __codexStatusLastArgs?: unknown;
   };
   if (manager.runningChanged !== terminalRunningChanged || wrapped.__codexStatusWrapped) {
     return;
   }
-  manager.runningChanged.connect((_sender, args) => {
-    wrapped.__codexStatusHasArgs = true;
-    wrapped.__codexStatusLastArgs = args;
-  });
   const original = manager.running.bind(manager);
   manager.running = options => {
     const names = terminalNames();
@@ -78,7 +72,7 @@ export function decorateRunningManager(
           React.createElement(
             'span',
             { className: 'jp-CodexStatus-srOnly' },
-            `; ${describe(status, model)}`
+            [`; ${describe(status, model)}`]
           )
         ),
         labelTitle: () => `${originalTitle?.call(item) ?? text}; ${describe(status, model)}`,
@@ -87,4 +81,14 @@ export function decorateRunningManager(
     });
   };
   wrapped.__codexStatusWrapped = true;
+}
+
+export function emitRunningChanged(
+  manager: IRunningSessions.IManager,
+  currentTerminalModels: unknown
+): void {
+  const signal = manager.runningChanged as unknown as { emit?: (args: unknown) => void };
+  if (signal.emit) {
+    signal.emit.call(signal, currentTerminalModels);
+  }
 }

@@ -69,8 +69,12 @@ test('renames and clears a live terminal through the API', async ({ page }) => {
 });
 
 test('updates the terminal tab and Running panel across Codex states', async ({ page }) => {
+  const pageErrors: string[] = [];
   page.on('console', message => console.log(`browser ${message.type()}: ${message.text()}`));
-  page.on('pageerror', error => console.error(`browser pageerror: ${error.stack ?? error.message}`));
+  page.on('pageerror', error => {
+    pageErrors.push(error.message);
+    console.error(`browser pageerror: ${error.stack ?? error.message}`);
+  });
   await page.page.goto('http://127.0.0.1:8899/lab', { waitUntil: 'domcontentloaded' });
   await page.page.waitForSelector('#jp-main-dock-panel');
   await page.page.getByRole('button', { name: 'New Launcher' }).click();
@@ -129,6 +133,14 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect.poll(currentState).toBe('working');
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'training job' })).toBeVisible();
   await expect(page.page.locator('.jp-CodexStatus-icon.jp-CodexStatus-working')).toBeVisible();
+  await page.page.getByRole('tab', { name: 'Running Terminals and Kernels' }).click();
+  const terminalSection = page.page.getByRole('region', { name: 'Terminals Section', exact: true });
+  const workingIcon = terminalSection.locator(
+    '.jp-CodexStatus-working .jp-RunningSessions-icon'
+  );
+  await expect(workingIcon).toBeVisible();
+  await expect.poll(async () => workingIcon.evaluate(element => getComputedStyle(element).animationName))
+    .toBe('jp-CodexStatus-spin');
 
   await expect.poll(currentState).toBe('blocked');
   await expect(page.page.locator('.jp-CodexStatus-icon.jp-CodexStatus-blocked')).toBeVisible();
@@ -136,10 +148,14 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect(page.page.locator('.lm-TabBar-tab[data-codex-status="blocked"]'))
     .toHaveAttribute('aria-label', /Codex blocked/);
 
-  await page.page.getByRole('tab', { name: 'Running Terminals and Kernels' }).click();
-  const terminalSection = page.page.getByRole('region', { name: 'Terminals Section', exact: true });
   await expect(terminalSection.locator('.jp-RunningSessions-itemLabel', { hasText: 'training job' }))
     .toBeVisible();
+  await page.page.getByRole('button', { name: /Search Tabs and Running Sessions/ }).click();
+  const searchDialog = page.page.locator('.jp-Dialog');
+  await expect(searchDialog).toBeVisible();
+  await searchDialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.page.locator('.jp-Dialog')).toHaveCount(0);
+  expect(pageErrors).toEqual([]);
 
   await page.page.locator('.jp-Terminal').click({ button: 'right' });
   await page.page.getByRole('menuitem', { name: 'Rename Terminal…' }).click();

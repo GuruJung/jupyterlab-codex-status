@@ -7,6 +7,6 @@ sleep 1
 jltitle "fixture title"
 sleep 1
 printf '\033]2;Codex ⠋ \007'
-sleep 2
+sleep 4
 printf '\033]2;Action Required\007'
 sleep 60

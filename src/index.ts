@@ -1,30 +1,21 @@
 import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
 import { ICommandPalette, InputDialog } from '@jupyterlab/apputils';
-import { IRunningSessionManagers, IRunningSessions } from '@jupyterlab/running';
+import { IRunningSessionManagers } from '@jupyterlab/running';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ITerminalTracker } from '@jupyterlab/terminal';
 
 import { clearTerminalTitle, fetchTerminals, setTerminalTitle } from './api';
 import { PollingModel } from './model';
-import { decorateRunningManager, describe, syncTabAriaLabels } from './running';
+import {
+  decorateRunningManager,
+  describe,
+  emitRunningChanged,
+  syncTabAriaLabels
+} from './running';
 import '../style/index.css';
 
 const PLUGIN_ID = 'jupyterlab-codex-status:plugin';
 const RENAME_COMMAND = 'jupyterlab-codex-status:rename-terminal';
-function emitRunningChanged(manager: IRunningSessions.IManager): void {
-  const wrapped = manager as IRunningSessions.IManager & {
-    __codexStatusHasArgs?: boolean;
-    __codexStatusLastArgs?: unknown;
-  };
-  if (!wrapped.__codexStatusHasArgs) {
-    return;
-  }
-  const signal = manager.runningChanged as unknown as { emit?: (args: unknown) => void };
-  if (signal.emit) {
-    signal.emit.call(signal, wrapped.__codexStatusLastArgs);
-  }
-}
-
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   description: 'Show Codex state and custom terminal names.',
@@ -101,10 +92,11 @@ const plugin: JupyterFrontEndPlugin<void> = {
         ]);
         const runningChanged = nextSignature !== runningSignature;
         runningSignature = nextSignature;
+        const currentTerminalModels = Array.from(terminalManager.running());
         for (const manager of runningManagers.items()) {
           decorateRunningManager(manager, model, terminalManager.runningChanged, terminalNames);
           if (runningChanged) {
-            emitRunningChanged(manager);
+            emitRunningChanged(manager, currentTerminalModels);
           }
         }
       } finally {
@@ -155,4 +147,4 @@ const plugin: JupyterFrontEndPlugin<void> = {
 
 export default plugin;
 export { PollingModel } from './model';
-export { decorateRunningManager, syncTabAriaLabels } from './running';
+export { decorateRunningManager, emitRunningChanged, syncTabAriaLabels } from './running';

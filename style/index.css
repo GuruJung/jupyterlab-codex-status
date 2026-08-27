@@ -20,6 +20,7 @@
 .jp-CodexStatus-icon.jp-CodexStatus-idle::before { content: '●'; }
 .jp-CodexStatus-working { color: var(--jp-warn-color1); }
 .jp-CodexStatus-icon.jp-CodexStatus-working::before { content: '◌'; animation: jp-CodexStatus-spin 1s linear infinite; }
+.jp-CodexStatus-working .jp-RunningSessions-icon { animation: jp-CodexStatus-spin 1s linear infinite; }
 .jp-CodexStatus-blocked { color: var(--jp-error-color1); }
 .jp-CodexStatus-icon.jp-CodexStatus-blocked::before { content: '⚠'; }
 
@@ -27,5 +28,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .jp-CodexStatus-working,
+  .jp-CodexStatus-working .jp-RunningSessions-icon,
   .jp-CodexStatus-icon.jp-CodexStatus-working::before { animation: none; }
 }
