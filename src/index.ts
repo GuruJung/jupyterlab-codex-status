@@ -96,7 +96,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
         for (const manager of runningManagers.items()) {
           decorateRunningManager(manager, model, terminalManager.runningChanged, terminalNames);
           if (runningChanged) {
-            emitRunningChanged(manager, currentTerminalModels);
+            emitRunningChanged(manager, terminalManager.runningChanged, currentTerminalModels);
           }
         }
       } finally {

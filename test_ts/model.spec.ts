@@ -121,8 +121,18 @@ describe('Running terminal decoration', () => {
     const signal = { emit: jest.fn() };
     const manager = { runningChanged: signal } as unknown as IRunningSessions.IManager;
     const models = [{ name: 'existing' }];
-    emitRunningChanged(manager, models);
+    emitRunningChanged(manager, signal, models);
     expect(signal.emit).toHaveBeenCalledWith(models);
+  });
+
+  it('does not emit terminal models through unrelated manager signals', () => {
+    const terminalSignal = { emit: jest.fn() };
+    const unrelatedSignal = { emit: jest.fn() };
+    const manager = {
+      runningChanged: unrelatedSignal
+    } as unknown as IRunningSessions.IManager;
+    emitRunningChanged(manager, terminalSignal, [{ name: 'existing' }]);
+    expect(unrelatedSignal.emit).not.toHaveBeenCalled();
   });
 });
 

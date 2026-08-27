@@ -85,8 +85,12 @@ export function decorateRunningManager(
 
 export function emitRunningChanged(
   manager: IRunningSessions.IManager,
+  terminalRunningChanged: unknown,
   currentTerminalModels: unknown
 ): void {
+  if (manager.runningChanged !== terminalRunningChanged) {
+    return;
+  }
   const signal = manager.runningChanged as unknown as { emit?: (args: unknown) => void };
   if (signal.emit) {
     signal.emit.call(signal, currentTerminalModels);
