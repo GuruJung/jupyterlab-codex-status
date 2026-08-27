@@ -9,13 +9,6 @@ const STATE_ICONS: Record<'idle' | 'working' | 'blocked', string> = {
   blocked: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"%3E%3Cpath d="M8 1 15 14H1Z" fill="%23d62728"/%3E%3Cpath d="M8 5v5M8 12v1" stroke="white"/%3E%3C/svg%3E'
 };
 
-function glyph(status: ITerminalStatus): string {
-  if (status.agent !== 'codex') {
-    return '';
-  }
-  return status.state === 'idle' ? '●' : status.state === 'working' ? '◌' : status.state === 'blocked' ? '⚠' : '';
-}
-
 export function describe(status: ITerminalStatus, model: PollingModel): string {
   const state = status.agent === 'codex' ? `Codex ${status.state ?? 'unknown'}` : 'Terminal';
   const updated = model.lastSuccess ? model.lastSuccess.toLocaleTimeString() : 'not updated yet';
@@ -57,7 +50,7 @@ export function decorateRunningManager(
       if (!status) {
         return item;
       }
-      const visibleLabel = `${glyph(status)} ${status.title ?? `Terminal ${name}`}`.trim();
+      const visibleLabel = status.title ?? `Terminal ${name}`;
       return {
         children: item.children,
         className: `${item.className ?? ''} jp-CodexStatus-${status.state ?? 'unknown'}`.trim(),

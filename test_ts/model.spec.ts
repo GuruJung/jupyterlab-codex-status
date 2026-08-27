@@ -98,11 +98,48 @@ describe('Running terminal decoration', () => {
     expect(decorated.icon()).toContain('svg');
     const label = decorated.label() as React.ReactElement;
     const children = React.Children.toArray(label.props.children);
-    expect(children[0]).toBe('◌ training job');
+    expect(children[0]).toBe('training job');
     const hidden = children[1] as React.ReactElement;
     expect(hidden.props.className).toBe('jp-CodexStatus-srOnly');
     expect(Array.isArray(hidden.props.children)).toBe(true);
     expect(hidden.props.children[0]).toContain('Codex working');
+  });
+
+  it('uses plain fallback labels for agent and regular terminals', () => {
+    const terminalSignal = { emit: jest.fn() };
+    const items = ['8', '9'].map(name => ({
+      icon: (): string => 'terminal-icon',
+      label: (): string => `terminals/${name}`
+    }));
+    const manager = {
+      name: 'Terminals',
+      runningChanged: terminalSignal,
+      running: () => items
+    } as unknown as IRunningSessions.IManager;
+    const model = new PollingModel(async () => ({ terminals: [] }));
+    model.statuses.set('8', {
+      name: '8',
+      title: null,
+      agent: 'codex',
+      state: 'idle'
+    });
+    model.statuses.set('9', {
+      name: '9',
+      title: null,
+      agent: null,
+      state: null
+    });
+
+    decorateRunningManager(manager, model, terminalSignal, () => ['8', '9']);
+    const decorated = manager.running({ mode: 'list' });
+    const visibleLabels = decorated.map(item => {
+      const label = item.label() as React.ReactElement;
+      return React.Children.toArray(label.props.children)[0];
+    });
+
+    expect(visibleLabels).toEqual(['Terminal 8', 'Terminal 9']);
+    expect(decorated[0].icon()).toContain('svg');
+    expect(decorated[1].icon()).toBe('terminal-icon');
   });
 
   it('ignores managers that do not expose the terminal service signal', () => {

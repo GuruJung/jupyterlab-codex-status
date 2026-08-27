@@ -32,7 +32,7 @@ python -m pip install jupyterlab-codex-status
 또는 export한 wheel을 설치합니다.
 
 ```bash
-python -m pip install dist-export/jupyterlab_codex_status-0.1.1-py3-none-any.whl
+python -m pip install dist-export/jupyterlab_codex_status-0.1.2-py3-none-any.whl
 ```
 
 이 확장을 설치·업데이트·제거한 뒤에는 JupyterLab **서버를 재시작**하고 열린 브라우저 탭을 새로고침해야 합니다. 서버 재시작은 실행 중인 터미널과 커널을 중단할 수 있으므로 적절한 유지보수 시점을 선택하세요. prebuilt 확장이므로 `jupyter lab build`와 개별 커널 재시작은 필요하지 않습니다.

@@ -32,7 +32,7 @@ python -m pip install jupyterlab-codex-status
 Or install an exported wheel:
 
 ```bash
-python -m pip install dist-export/jupyterlab_codex_status-0.1.1-py3-none-any.whl
+python -m pip install dist-export/jupyterlab_codex_status-0.1.2-py3-none-any.whl
 ```
 
 Restart the JupyterLab **server** after installing, upgrading, or uninstalling this extension, then refresh open browser tabs. A server restart can interrupt running terminals and kernels, so choose an appropriate maintenance window. This is a prebuilt extension: `jupyter lab build` is not required, and restarting individual kernels is not required.

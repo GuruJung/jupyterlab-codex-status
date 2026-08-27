@@ -182,6 +182,18 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
     expect(geometry.centerDeltaX).toBeLessThanOrEqual(1);
     expect(geometry.centerDeltaY).toBeLessThanOrEqual(1);
   };
+  const visibleRunningLabel = async (title: string): Promise<string> => {
+    const label = terminalSection.locator(
+      '.jp-RunningSessions-itemLabel',
+      { hasText: title }
+    );
+    await expect(label).toBeVisible();
+    return label.evaluate(element => {
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.querySelectorAll('.jp-CodexStatus-srOnly').forEach(node => node.remove());
+      return clone.textContent?.trim() ?? '';
+    });
+  };
 
   await expect.poll(currentState).toBe('idle');
   const idleTabIcon = page.page.locator(
@@ -219,6 +231,7 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect(workingIcon).toBeVisible();
   await expect.poll(async () => workingIcon.evaluate(element => getComputedStyle(element).animationName))
     .toBe('jp-CodexStatus-spin');
+  await expect.poll(() => visibleRunningLabel('training job')).toBe('training job');
 
   await page.page.locator('.jp-Terminal').click();
   await page.page.keyboard.type('continue-to-blocked');
@@ -250,6 +263,7 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
 
   await expect(terminalSection.locator('.jp-RunningSessions-itemLabel', { hasText: 'training job' }))
     .toBeVisible();
+  await expect.poll(() => visibleRunningLabel('training job')).toBe('training job');
   await page.page.getByRole('button', { name: /Search Tabs and Running Sessions/ }).click();
   const searchDialog = page.page.locator('.jp-Dialog');
   await expect(searchDialog).toBeVisible();
@@ -265,6 +279,7 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'dialog title' })).toBeVisible();
 
   const runningItem = terminalSection.locator('.jp-RunningSessions-item', { hasText: 'dialog title' });
+  await expect.poll(() => visibleRunningLabel('dialog title')).toBe('dialog title');
   await expect(runningItem.locator('.jp-CodexStatus-srOnly')).toContainText('Codex blocked');
   await runningItem.hover();
   const shutdownButton = runningItem.locator('.jp-RunningSessions-itemShutdown');
