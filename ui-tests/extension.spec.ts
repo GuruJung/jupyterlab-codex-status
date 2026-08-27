@@ -129,10 +129,70 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
       return body.terminals.find(item => item.name === terminalName)?.state ?? null;
     }, { terminalName: name });
   };
+  const currentAgent = async (): Promise<string | null> => {
+    return page.page.evaluate(async ({ terminalName }) => {
+      const response = await fetch('/jupyterlab-codex-status/api/v1/terminals');
+      const body = (await response.json()) as {
+        terminals: Array<{ name: string; agent: string | null }>;
+      };
+      return body.terminals.find(item => item.name === terminalName)?.agent ?? null;
+    }, { terminalName: name });
+  };
+  const tabIconGeometry = async (status: string): Promise<{
+    width: number;
+    height: number;
+    centerDeltaX: number;
+    centerDeltaY: number;
+  }> => {
+    const icon = status === 'none'
+      ? page.page.locator(
+        '.lm-DockPanel-tabBar .lm-TabBar-tab[data-codex-status="none"] .lm-TabBar-tabIcon > svg'
+      )
+      : page.page.locator(
+        `.lm-DockPanel-tabBar .jp-CodexStatus-icon.jp-CodexStatus-${status} > svg`
+      );
+    return icon.evaluate(svg => {
+      const container = svg.parentElement;
+      if (!container || !svg) {
+        throw new Error('terminal tab icon was not rendered');
+      }
+      const containerBox = container.getBoundingClientRect();
+      const svgBox = svg.getBoundingClientRect();
+      const svgStyle = getComputedStyle(svg);
+      return {
+        width: Number.parseFloat(svgStyle.width),
+        height: Number.parseFloat(svgStyle.height),
+        centerDeltaX: Math.abs(
+          svgBox.left + svgBox.width / 2 - (containerBox.left + containerBox.width / 2)
+        ),
+        centerDeltaY: Math.abs(
+          svgBox.top + svgBox.height / 2 - (containerBox.top + containerBox.height / 2)
+        )
+      };
+    });
+  };
+  const expectAligned = (geometry: {
+    width: number;
+    height: number;
+    centerDeltaX: number;
+    centerDeltaY: number;
+  }): void => {
+    expect(geometry.width).toBe(14);
+    expect(geometry.height).toBe(14);
+    expect(geometry.centerDeltaX).toBeLessThanOrEqual(1);
+    expect(geometry.centerDeltaY).toBeLessThanOrEqual(1);
+  };
 
   await expect.poll(currentState).toBe('working');
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'training job' })).toBeVisible();
-  await expect(page.page.locator('.jp-CodexStatus-icon.jp-CodexStatus-working')).toBeVisible();
+  const workingTabIcon = page.page.locator(
+    '.lm-DockPanel-tabBar .jp-CodexStatus-icon.jp-CodexStatus-working > svg'
+  );
+  await expect(workingTabIcon).toBeVisible();
+  expectAligned(await tabIconGeometry('working'));
+  await expect.poll(async () => workingTabIcon.evaluate(element =>
+    getComputedStyle(element).animationName
+  )).toBe('jp-CodexStatus-spin');
   await page.page.getByRole('tab', { name: 'Running Terminals and Kernels' }).click();
   const terminalSection = page.page.getByRole('region', { name: 'Terminals Section', exact: true });
   const workingIcon = terminalSection.locator(
@@ -142,8 +202,30 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect.poll(async () => workingIcon.evaluate(element => getComputedStyle(element).animationName))
     .toBe('jp-CodexStatus-spin');
 
+  await page.page.locator('.jp-Terminal').click();
+  await page.page.keyboard.type('continue-to-blocked');
+  await page.page.keyboard.press('Enter');
+
   await expect.poll(currentState).toBe('blocked');
-  await expect(page.page.locator('.jp-CodexStatus-icon.jp-CodexStatus-blocked')).toBeVisible();
+  const blockedTabIcon = page.page.locator(
+    '.lm-DockPanel-tabBar .jp-CodexStatus-icon.jp-CodexStatus-blocked > svg'
+  );
+  await expect(blockedTabIcon).toBeVisible();
+  expectAligned(await tabIconGeometry('blocked'));
+  await expect(blockedTabIcon.locator('polygon')).toHaveCount(0);
+  await expect(blockedTabIcon.locator('circle')).toHaveCount(3);
+  const blockedColors = await blockedTabIcon.evaluate(element => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--jp-info-color1)';
+    document.body.appendChild(probe);
+    const result = {
+      actual: getComputedStyle(element).color,
+      expected: getComputedStyle(probe).color
+    };
+    probe.remove();
+    return result;
+  });
+  expect(blockedColors.actual).toBe(blockedColors.expected);
   await expect(page.page.locator('.lm-TabBar-tabLabel', { hasText: 'training job' })).toBeVisible();
   await expect(page.page.locator('.lm-TabBar-tab[data-codex-status="blocked"]'))
     .toHaveAttribute('aria-label', /Codex blocked/);
@@ -168,6 +250,22 @@ test('updates the terminal tab and Running panel across Codex states', async ({ 
   await expect(runningItem.locator('.jp-CodexStatus-srOnly')).toContainText('Codex blocked');
   await runningItem.hover();
   const shutdownButton = runningItem.locator('.jp-RunningSessions-itemShutdown');
+  await expect(shutdownButton).toBeVisible();
+
+  await expect.poll(currentAgent, { timeout: 20000 }).toBe(null);
+  await expect.poll(currentState, { timeout: 20000 }).toBe(null);
+  const restoredTab = page.page.locator(
+    '.lm-DockPanel-tabBar .lm-TabBar-tab[data-codex-agent="none"][data-codex-status="none"]',
+    { hasText: 'dialog title' }
+  );
+  await expect(restoredTab).toBeVisible();
+  await expect(restoredTab.locator('.jp-CodexStatus-icon')).toHaveCount(0);
+  expectAligned(await tabIconGeometry('none'));
+  await expect.poll(async () => restoredTab.locator(
+    '.lm-TabBar-tabIcon > svg'
+  ).evaluate(element => getComputedStyle(element).animationName)).toBe('none');
+
+  await runningItem.hover();
   await expect(shutdownButton).toBeVisible();
   await shutdownButton.click();
   await expect.poll(async () => page.page.locator('.jp-Terminal').count()).toBe(0);

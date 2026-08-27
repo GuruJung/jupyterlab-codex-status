@@ -26,7 +26,7 @@ trap cleanup EXIT
 cp /bin/bash "$temporary/codex"
 jupyter lab --no-browser --IdentityProvider.token='' --ServerApp.password='' \
   --ServerApp.disable_check_xsrf=True \
-  --ServerApp.terminado_settings="{\"shell_command\":[\"$temporary/codex\",\"/work/ui-tests/fixtures/codex-state.sh\"]}" \
+  --ServerApp.terminado_settings="{\"shell_command\":[\"/bin/bash\",\"--noprofile\",\"--norc\",\"-c\",\"$temporary/codex /work/ui-tests/fixtures/codex-state.sh; exec /bin/bash --noprofile --norc\"]}" \
   --ServerApp.allow_root=True --ServerApp.port=8899 --ServerApp.port_retries=0 \
   --ServerApp.root_dir="$temporary" >"$temporary/jupyter.log" 2>&1 &
 server_pid=$!

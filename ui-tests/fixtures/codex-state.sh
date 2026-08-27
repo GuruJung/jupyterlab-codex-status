@@ -7,6 +7,7 @@ sleep 1
 jltitle "fixture title"
 sleep 1
 printf '\033]2;Codex ⠋ \007'
-sleep 4
+IFS= read -r _
 printf '\033]2;Action Required\007'
-sleep 60
+sleep 12
+exit 0

@@ -7,6 +7,7 @@ import {
   emitRunningChanged,
   syncTabAriaLabels
 } from '../src/running';
+import { CODEX_STATE_ICONS, TerminalIconController, TerminalTitle } from '../src/tab';
 
 describe('PollingModel', () => {
   beforeEach(() => {
@@ -146,5 +147,57 @@ describe('tab accessibility', () => {
       'training job; Codex blocked; status may be stale'
     );
     tab.remove();
+  });
+});
+
+describe('terminal tab icon decoration', () => {
+  const makeTitle = (name: string): TerminalTitle => ({
+    icon: { name: `${name}-icon` },
+    iconClass: `${name}-class`,
+    iconLabel: `${name}-label`
+  } as unknown as TerminalTitle);
+
+  it('preserves the first complete icon binding across state changes', () => {
+    const controller = new TerminalIconController();
+    const title = makeTitle('terminal');
+    const original = {
+      icon: title.icon,
+      iconClass: title.iconClass,
+      iconLabel: title.iconLabel
+    };
+
+    controller.update(title, 'idle');
+    expect(title.icon).toBe(CODEX_STATE_ICONS.idle);
+    expect(title.iconClass).toBe('jp-CodexStatus-icon jp-CodexStatus-idle');
+
+    controller.update(title, 'working');
+    controller.update(title, 'blocked');
+    expect(title.icon).toBe(CODEX_STATE_ICONS.blocked);
+    expect(title.iconLabel).toBe('Codex waiting for user input');
+
+    controller.update(title, null);
+    expect(title.icon).toBe(original.icon);
+    expect(title.iconClass).toBe(original.iconClass);
+    expect(title.iconLabel).toBe(original.iconLabel);
+  });
+
+  it('restores missing states independently and recaptures later defaults', () => {
+    const controller = new TerminalIconController();
+    const first = makeTitle('first');
+    const second = makeTitle('second');
+    const secondIcon = second.icon;
+
+    controller.update(first, 'working');
+    controller.update(second, 'blocked');
+    controller.update(first, null);
+    expect(first.iconClass).toBe('first-class');
+    expect(second.icon).toBe(CODEX_STATE_ICONS.blocked);
+
+    controller.update(second, null);
+    expect(second.icon).toBe(secondIcon);
+    second.iconClass = 'updated-default-class';
+    controller.update(second, 'idle');
+    controller.update(second, null);
+    expect(second.iconClass).toBe('updated-default-class');
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "jupyterlab-codex-status",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Codex status and in-memory terminal titles for JupyterLab",
   "license": "Apache-2.0",
   "private": true,
@@ -30,6 +30,7 @@
     "@jupyterlab/services": "^7.4.0",
     "@jupyterlab/settingregistry": "^4.4.0",
     "@jupyterlab/terminal": "^4.4.0",
+    "@jupyterlab/ui-components": "^4.4.0",
     "@lumino/coreutils": "^2.2.0",
     "@lumino/signaling": "^2.1.4",
     "react": "^18.2.0"

@@ -12,6 +12,7 @@ import {
   emitRunningChanged,
   syncTabAriaLabels
 } from './running';
+import { TerminalIconController } from './tab';
 import '../style/index.css';
 
 const PLUGIN_ID = 'jupyterlab-codex-status:plugin';
@@ -30,7 +31,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     settingsRegistry: ISettingRegistry | null
   ): Promise<void> => {
     const model = new PollingModel(fetchTerminals);
-    const defaultIconClasses = new WeakMap<object, string>();
+    const terminalIcons = new TerminalIconController();
     const terminalManager = app.serviceManager.terminals;
     const terminalNames = (): string[] => Array.from(terminalManager.running(), item => item.name);
 
@@ -59,16 +60,15 @@ const plugin: JupyterFrontEndPlugin<void> = {
           const name = widget.content.session.name;
           const status = model.statuses.get(name);
           if (!status) {
+            terminalIcons.update(widget.title, null);
             return;
-          }
-          if (!defaultIconClasses.has(widget)) {
-            defaultIconClasses.set(widget, widget.title.iconClass);
           }
           widget.title.label = status.title ?? `Terminal ${name}`;
           widget.title.caption = `${widget.title.label}; ${describe(status, model)}`;
-          widget.title.iconClass = status.agent === 'codex' && status.state
-            ? `jp-CodexStatus-icon jp-CodexStatus-${status.state}`
-            : (defaultIconClasses.get(widget) ?? '');
+          terminalIcons.update(
+            widget.title,
+            status.agent === 'codex' ? status.state : null
+          );
           const codexStatus = status.state ?? 'none';
           const codexAgent = status.agent ?? 'none';
           const codexAriaLabel = `${widget.title.label}; ${describe(status, model)}`;

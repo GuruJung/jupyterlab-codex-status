@@ -14,7 +14,7 @@ grep -q 'jupyterlab_codex_status' "$temporary/server-extensions.txt"
 "$temporary/venv/bin/python" - <<'PY'
 from jupyterlab_codex_status import __version__
 from jupyterlab_codex_status.manifest import load_manifest
-assert __version__ == "0.1.0"
+assert __version__ == "0.1.1"
 assert load_manifest()["version"] == "2026.08.09.1"
 PY
 
