@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from jupyterlab_codex_status.manifest import ManifestDetector, _predicate_matches, select_region
+from pathlib import Path
+
+import pytest
+
+import jupyterlab_codex_status.manifest as manifest_module
+from jupyterlab_codex_status.manifest import (
+    ManifestDetector,
+    _predicate_matches,
+    load_manifest,
+    load_supplemental_manifest,
+    select_region,
+)
 from jupyterlab_codex_status.screen import MAX_OSC_BYTES, TerminalScreen
 
 
@@ -36,6 +47,96 @@ def test_manifest_priority_regions_and_skip_update() -> None:
     result = detector.match(transcript)
     assert result.state == "unknown"
     assert result.skip_state_update
+
+
+PLAN_CONFIRMATION = """Implement this plan?
+
+› 1. Yes, implement this plan          Switch to Default and start coding.
+  2. Yes, clear context and implement  Fresh thread. Context: 28% used.
+  3. No, stay in Plan mode             Continue planning with the model.
+
+  Press enter to confirm or esc to go back"""
+
+
+def _screen_with_prompt(prompt: str, title: str = "Codex") -> TerminalScreen:
+    screen = TerminalScreen(columns=100, lines=20)
+    screen.feed(f"\x1b]2;{title}\x07")
+    screen.feed(prompt.replace("\n", "\r\n"))
+    return screen
+
+
+@pytest.mark.parametrize("title", ["Codex", "Codex ⠋ "])
+def test_plan_confirmation_prompt_is_blocked_ahead_of_osc_state(title: str) -> None:
+    result = ManifestDetector().match(_screen_with_prompt(PLAN_CONFIRMATION, title))
+    assert result.state == "blocked"
+    assert not result.skip_state_update
+
+
+@pytest.mark.parametrize(
+    "footer",
+    [
+        "Press enter to confirm",
+        "  PRESS ENTER TO CONFIRM or choose another action",
+    ],
+)
+def test_confirm_prompt_accepts_case_whitespace_and_any_suffix(footer: str) -> None:
+    prompt = f"› 1. Continue\n  2. Stop\n\n{footer}"
+    assert ManifestDetector().match(_screen_with_prompt(prompt)).state == "blocked"
+
+
+@pytest.mark.parametrize(
+    "prompt",
+    [
+        "› 1. Continue\nStatus: Press enter to confirm",
+        "Press enter to confirm\n› 1. Continue\nNo confirmation footer here",
+    ],
+)
+def test_confirm_prompt_ignores_midline_and_historical_text(prompt: str) -> None:
+    assert ManifestDetector().match(_screen_with_prompt(prompt)).state == "idle"
+
+
+def test_transcript_viewer_still_skips_state_update() -> None:
+    prompt = "› q to quit; esc to edit prev\nPress enter to confirm"
+    result = ManifestDetector().match(_screen_with_prompt(prompt))
+    assert result.state == "unknown"
+    assert result.skip_state_update
+
+
+def test_custom_manifest_is_isolated_from_supplement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_if_loaded() -> dict[str, object]:
+        raise AssertionError("default supplement must not load for an injected manifest")
+
+    monkeypatch.setattr(manifest_module, "load_supplemental_manifest", fail_if_loaded)
+    detector = ManifestDetector({"rules": []})
+    assert detector.match(_screen_with_prompt(PLAN_CONFIRMATION)).state == "idle"
+
+
+def test_default_detector_propagates_supplement_load_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_to_load() -> dict[str, object]:
+        raise FileNotFoundError("missing supplement")
+
+    monkeypatch.setattr(manifest_module, "load_supplemental_manifest", fail_to_load)
+    with pytest.raises(FileNotFoundError, match="missing supplement"):
+        ManifestDetector()
+
+
+def test_supplement_loader_propagates_parse_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "codex_supplement.toml").write_text("[[rules", encoding="utf-8")
+    monkeypatch.setattr(manifest_module.importlib.resources, "files", lambda _package: tmp_path)
+    with pytest.raises(manifest_module.tomllib.TOMLDecodeError):
+        load_supplemental_manifest()
+
+
+def test_vendor_manifest_remains_separate_from_supplement() -> None:
+    assert load_manifest()["version"] == "2026.08.09.1"
+    assert all(rule["id"] != "live_confirm_prompt" for rule in load_manifest()["rules"])
+    assert load_supplemental_manifest()["rules"][0]["id"] == "live_confirm_prompt"
 
 
 def test_resize_and_bounded_history() -> None:

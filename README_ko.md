@@ -32,7 +32,7 @@ python -m pip install jupyterlab-codex-status
 또는 export한 wheel을 설치합니다.
 
 ```bash
-python -m pip install dist-export/jupyterlab_codex_status-0.1.2-py3-none-any.whl
+python -m pip install dist-export/jupyterlab_codex_status-0.1.3-py3-none-any.whl
 ```
 
 이 확장을 설치·업데이트·제거한 뒤에는 JupyterLab **서버를 재시작**하고 열린 브라우저 탭을 새로고침해야 합니다. 서버 재시작은 실행 중인 터미널과 커널을 중단할 수 있으므로 적절한 유지보수 시점을 선택하세요. prebuilt 확장이므로 `jupyter lab build`와 개별 커널 재시작은 필요하지 않습니다.
@@ -105,4 +105,4 @@ python -m pip uninstall jupyterlab-codex-status
 
 ## 라이선스 및 귀속
 
-이 프로젝트는 Apache License 2.0으로 배포됩니다. Herdr Codex detection manifest version `2026.08.09.1`을 commit `7ae4b056a0ca478e584fa282c45b528134cc80c9`, Git blob `9169e10848e0b3310e53fbf4e4e66b2817886623`에 고정해 재배포합니다. 자세한 내용은 [NOTICE](NOTICE)를 확인하세요. 이 프로젝트는 OpenAI, Jupyter 또는 Herdr와 제휴하거나 그들의 보증을 받지 않습니다.
+이 프로젝트는 Apache License 2.0으로 배포됩니다. Herdr Codex detection manifest version `2026.08.09.1`을 commit `7ae4b056a0ca478e584fa282c45b528134cc80c9`, Git blob `9169e10848e0b3310e53fbf4e4e66b2817886623`에 고정해 재배포합니다. 자세한 내용은 [NOTICE](NOTICE)를 확인하세요. vendored manifest는 변경하지 않으며 기본 detector는 줄 시작의 `Press enter to confirm` 프롬프트를 사용자 입력 대기 `blocked` 상태로 감지하는 규칙을 포함한 프로젝트 소유 supplemental 규칙을 함께 적용합니다. 이 프로젝트는 OpenAI, Jupyter 또는 Herdr와 제휴하거나 그들의 보증을 받지 않습니다.

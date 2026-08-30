@@ -1,0 +1,11 @@
+id = "jupyterlab-codex-status-codex-supplement"
+version = "2026.08.30.1"
+
+[[rules]]
+id = "live_confirm_prompt"
+state = "blocked"
+priority = 1075
+region = "after_last_prompt_marker"
+visible_blocker = true
+line_regex = ['(?i)^\s*press enter to confirm\b']
+not = [{ contains = ["q to quit"] }]

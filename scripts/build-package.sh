@@ -19,6 +19,7 @@ with zipfile.ZipFile(wheel) as archive:
         "share/licenses/jupyterlab-codex-status/LICENSE",
         "share/licenses/jupyterlab-codex-status/NOTICE",
         "jupyterlab_codex_status/data/codex.toml",
+        "jupyterlab_codex_status/data/codex_supplement.toml",
     }
     assert all(any(name.endswith(suffix) for name in names) for suffix in required_suffixes)
     manifest_name = next(name for name in names if name.endswith("jupyterlab_codex_status/data/codex.toml"))

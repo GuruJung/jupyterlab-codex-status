@@ -13,9 +13,20 @@ grep -q 'jupyterlab-codex-status' "$temporary/labextensions.txt"
 grep -q 'jupyterlab_codex_status' "$temporary/server-extensions.txt"
 "$temporary/venv/bin/python" - <<'PY'
 from jupyterlab_codex_status import __version__
-from jupyterlab_codex_status.manifest import load_manifest
-assert __version__ == "0.1.2"
+from jupyterlab_codex_status.manifest import ManifestDetector, load_manifest
+from jupyterlab_codex_status.screen import TerminalScreen
+
+assert __version__ == "0.1.3"
 assert load_manifest()["version"] == "2026.08.09.1"
+screen = TerminalScreen(columns=100, lines=12)
+screen.feed("\x1b]2;Codex\x07")
+screen.feed(
+    "Implement this plan?\r\n\r\n"
+    "› 1. Yes, implement this plan\r\n"
+    "  2. No, stay in Plan mode\r\n\r\n"
+    "  Press enter to confirm or esc to go back"
+)
+assert ManifestDetector().match(screen).state == "blocked"
 PY
 
 "$temporary/venv/bin/jupyter" server --no-browser \

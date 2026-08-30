@@ -32,7 +32,7 @@ python -m pip install jupyterlab-codex-status
 Or install an exported wheel:
 
 ```bash
-python -m pip install dist-export/jupyterlab_codex_status-0.1.2-py3-none-any.whl
+python -m pip install dist-export/jupyterlab_codex_status-0.1.3-py3-none-any.whl
 ```
 
 Restart the JupyterLab **server** after installing, upgrading, or uninstalling this extension, then refresh open browser tabs. A server restart can interrupt running terminals and kernels, so choose an appropriate maintenance window. This is a prebuilt extension: `jupyter lab build` is not required, and restarting individual kernels is not required.
@@ -105,4 +105,4 @@ There is no persisted data or migration to remove.
 
 ## License and attribution
 
-This project is licensed under the Apache License 2.0. It redistributes the Herdr Codex detection manifest version `2026.08.09.1`, pinned to commit `7ae4b056a0ca478e584fa282c45b528134cc80c9` and Git blob `9169e10848e0b3310e53fbf4e4e66b2817886623`; see [NOTICE](NOTICE). This project is not affiliated with or endorsed by OpenAI, Jupyter, or Herdr.
+This project is licensed under the Apache License 2.0. It redistributes the Herdr Codex detection manifest version `2026.08.09.1`, pinned to commit `7ae4b056a0ca478e584fa282c45b528134cc80c9` and Git blob `9169e10848e0b3310e53fbf4e4e66b2817886623`; see [NOTICE](NOTICE). The vendored manifest remains unchanged. The default detector combines it with project-owned supplemental rules, including detection of line-leading `Press enter to confirm` prompts as blocked user-input waits. This project is not affiliated with or endorsed by OpenAI, Jupyter, or Herdr.

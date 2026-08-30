@@ -1,4 +1,4 @@
-"""Evaluator for the pinned Herdr Codex state manifest."""
+"""Evaluator for the pinned Herdr manifest and project-owned supplemental rules."""
 
 from __future__ import annotations
 
@@ -25,6 +25,23 @@ def load_manifest() -> dict[str, Any]:
     path = importlib.resources.files("jupyterlab_codex_status.data").joinpath("codex.toml")
     with path.open("rb") as stream:
         return tomllib.load(stream)
+
+
+def load_supplemental_manifest() -> dict[str, Any]:
+    path = importlib.resources.files("jupyterlab_codex_status.data").joinpath(
+        "codex_supplement.toml"
+    )
+    with path.open("rb") as stream:
+        return tomllib.load(stream)
+
+
+def _load_default_manifest() -> dict[str, Any]:
+    manifest = load_manifest()
+    supplement = load_supplemental_manifest()
+    return {
+        **manifest,
+        "rules": [*manifest.get("rules", []), *supplement.get("rules", [])],
+    }
 
 
 def _predicate_matches(predicate: dict[str, Any], value: str) -> bool:
@@ -76,7 +93,7 @@ def select_region(region: str, screen: TerminalScreen) -> str:
 
 class ManifestDetector:
     def __init__(self, manifest: dict[str, Any] | None = None) -> None:
-        self.manifest = manifest or load_manifest()
+        self.manifest = _load_default_manifest() if manifest is None else manifest
         self.rules = sorted(
             self.manifest.get("rules", []),
             key=lambda item: item["priority"],
