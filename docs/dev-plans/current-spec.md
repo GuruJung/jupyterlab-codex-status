@@ -16,7 +16,7 @@
 
 ## GitHub 저장소 유지보수
 
-- 프로젝트의 canonical GitHub 원격은 private `GuruJung/jupyterlab-codex-status`이며 기본 브랜치는 `main`이다.
+- 프로젝트의 canonical GitHub 원격은 public `GuruJung/jupyterlab-codex-status`이며 기본 브랜치는 `main`이다. 개인 이메일이 포함된 이전 GitHub 저장소와 그 PR·Actions 기록은 별도의 private archive에 보관한다.
 - push와 pull request에서 전체 CI를 실행하고, GitHub Actions 권한은 필요한 최소 범위로 제한한다.
 - npm, Python, GitHub Actions 의존성을 Dependabot으로 매월 1일 09:00(Asia/Seoul)에 점검하고 GitHub의 의존성 취약점 알림과 자동 보안 수정을 사용한다.
 - 이 저장소 운영 정책은 Codex 상태 판정과 다른 제품 동작을 변경하지 않는다.

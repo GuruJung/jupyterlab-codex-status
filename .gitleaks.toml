@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Local-only Jupyter smoke-test authentication token"
+regexTarget = "secret"
+regexes = [
+  '''codex-status-smoke-token''',
+]
+paths = [
+  '''scripts/smoke-package\.sh''',
+]
