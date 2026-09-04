@@ -13,3 +13,12 @@
 - supplemental manifest를 읽거나 파싱하지 못하면 vendor-only 동작으로 fallback하지 않고 명시적으로 실패한다.
 
 결정 근거와 인수 조건은 [feature spec](specs/20260830-detect-confirm-prompts-as-blocked/spec.md)에 기록되어 있다.
+
+## GitHub 저장소 유지보수
+
+- 프로젝트의 canonical GitHub 원격은 private `GuruJung/jupyterlab-codex-status`이며 기본 브랜치는 `main`이다.
+- push와 pull request에서 전체 CI를 실행하고, GitHub Actions 권한은 필요한 최소 범위로 제한한다.
+- npm, Python, GitHub Actions 의존성을 Dependabot으로 매주 점검하고 GitHub의 의존성 취약점 알림과 자동 보안 수정을 사용한다.
+- 이 저장소 운영 정책은 Codex 상태 판정과 다른 제품 동작을 변경하지 않는다.
+
+결정 근거와 인수 조건은 [feature spec](specs/20260904-github-private-repository-bootstrap/spec.md)에 기록되어 있다.
